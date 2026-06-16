@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "impeller/entity/contents/text_contents.h"
+#include "third_party/flutter_engine/impeller/entity/contents/text_contents.h"
 
 #include <cstring>
 #include <optional>
 #include <utility>
 
-#include "impeller/core/buffer_view.h"
-#include "impeller/core/formats.h"
-#include "impeller/core/sampler_descriptor.h"
-#include "impeller/entity/entity.h"
-#include "impeller/geometry/color.h"
-#include "impeller/geometry/point.h"
-#include "impeller/renderer/render_pass.h"
-#include "impeller/typographer/glyph_atlas.h"
+#include "third_party/flutter_engine/impeller/core/buffer_view.h"
+#include "third_party/flutter_engine/impeller/core/formats.h"
+#include "third_party/flutter_engine/impeller/core/sampler_descriptor.h"
+#include "third_party/flutter_engine/impeller/entity/entity.h"
+#include "third_party/flutter_engine/impeller/geometry/color.h"
+#include "third_party/flutter_engine/impeller/geometry/point.h"
+#include "third_party/flutter_engine/impeller/renderer/render_pass.h"
+#include "third_party/flutter_engine/impeller/typographer/glyph_atlas.h"
 
 namespace impeller {
 namespace {
@@ -34,9 +34,7 @@ constexpr bool kPlatformGammaCorrectionDefault =
     false;
 #endif
 
-Point SizeToPoint(Size size) {
-  return Point(size.width, size.height);
-}
+Point SizeToPoint(Size size) { return Point(size.width, size.height); }
 }  // namespace
 
 using VS = GlyphAtlasPipeline::VertexShader;
@@ -50,9 +48,7 @@ void TextContents::SetTextFrame(const std::shared_ptr<TextFrame>& frame) {
   frame_ = frame;
 }
 
-void TextContents::SetColor(Color color) {
-  color_ = color;
-}
+void TextContents::SetColor(Color color) { color_ = color; }
 
 Color TextContents::GetColor() const {
   return color_.WithAlpha(color_.alpha * inherited_opacity_);
@@ -62,25 +58,20 @@ void TextContents::SetInheritedOpacity(Scalar opacity) {
   inherited_opacity_ = opacity;
 }
 
-void TextContents::SetPosition(Point position) {
-  position_ = position;
-}
+void TextContents::SetPosition(Point position) { position_ = position; }
 
 void TextContents::SetScreenTransform(const Matrix& transform) {
   screen_transform_ = transform;
 }
 
-void TextContents::SetForceTextColor(bool value) {
-  force_text_color_ = value;
-}
+void TextContents::SetForceTextColor(bool value) { force_text_color_ = value; }
 
 std::optional<Rect> TextContents::GetCoverage(const Entity& entity) const {
   return frame_->GetBounds().TransformBounds(entity.GetTransform());
 }
 
 void TextContents::SetTextProperties(
-    Color color,
-    const std::optional<StrokeParameters>& stroke) {
+    Color color, const std::optional<StrokeParameters>& stroke) {
   if (frame_->HasColor()) {
     // Alpha is always applied when rendering, remove it here so
     // we do not double-apply the alpha.
@@ -199,6 +190,20 @@ void TextContents::ComputeVertexData(VS::PerVertexData* vtx_contents,
       if (frame_bounds.is_placeholder) {
         VALIDATION_LOG << "Frame bounds are not present in the atlas "
                        << font_atlas;
+
+        // The index buffer generation (see caller in TextContents::Render)
+        // assumes exactly 4 vertices per glyph sequentially (i.e. quad index *
+        // 4). If we simply `continue` here, we skip emitting vertices for this
+        // placeholder glyph, causing all subsequent glyphs in this run to be
+        // shifted in the vertex buffer relative to the index buffer. This
+        // results in garbled/glitched text. By emitting a degenerate
+        // (zero-sized) quad, we maintain perfectly aligned buffers.
+        for (const Point& point : unit_points) {
+          (void)point;  // Suppress unused warning
+          vtx.uv = Point(0, 0);
+          vtx.position = Point(0, 0);
+          vtx_contents[i++] = vtx;
+        }
         continue;
       }
 
@@ -241,8 +246,7 @@ void TextContents::ComputeVertexData(VS::PerVertexData* vtx_contents,
   }
 }
 
-bool TextContents::Render(const ContentContext& renderer,
-                          const Entity& entity,
+bool TextContents::Render(const ContentContext& renderer, const Entity& entity,
                           RenderPass& pass) const {
   Color color = GetColor();
   if (color.IsTransparent()) {
