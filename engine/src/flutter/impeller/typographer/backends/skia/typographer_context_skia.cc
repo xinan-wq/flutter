@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "impeller/typographer/backends/skia/typographer_context_skia.h"
+#include "third_party/flutter_engine/impeller/typographer/backends/skia/typographer_context_skia.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -11,37 +11,35 @@
 #include <utility>
 #include <vector>
 
-#include "flutter/fml/logging.h"
-#include "flutter/fml/trace_event.h"
-#include "fml/closure.h"
-
-#include "impeller/base/validation.h"
-#include "impeller/core/allocator.h"
-#include "impeller/core/buffer_view.h"
-#include "impeller/core/formats.h"
-#include "impeller/core/host_buffer.h"
-#include "impeller/core/texture_descriptor.h"
-#include "impeller/geometry/rect.h"
-#include "impeller/geometry/size.h"
-#include "impeller/renderer/command_buffer.h"
-#include "impeller/renderer/render_pass.h"
-#include "impeller/renderer/render_target.h"
-#include "impeller/typographer/backends/skia/typeface_skia.h"
-#include "impeller/typographer/font_glyph_pair.h"
-#include "impeller/typographer/glyph.h"
-#include "impeller/typographer/glyph_atlas.h"
-#include "impeller/typographer/rectangle_packer.h"
-#include "impeller/typographer/typographer_context.h"
-
-#include "third_party/abseil-cpp/absl/status/statusor.h"
-#include "third_party/skia/include/core/SkBitmap.h"
-#include "third_party/skia/include/core/SkBlendMode.h"
-#include "third_party/skia/include/core/SkCanvas.h"
-#include "third_party/skia/include/core/SkColor.h"
-#include "third_party/skia/include/core/SkFont.h"
-#include "third_party/skia/include/core/SkPaint.h"
-#include "third_party/skia/include/core/SkSize.h"
-#include "third_party/skia/include/core/SkSurface.h"
+#include "third_party/absl/status/statusor.h"
+#include "third_party/flutter_engine/fml/closure.h"
+#include "third_party/flutter_engine/fml/logging.h"
+#include "third_party/flutter_engine/fml/trace_event.h"
+#include "third_party/flutter_engine/impeller/base/validation.h"
+#include "third_party/flutter_engine/impeller/core/allocator.h"
+#include "third_party/flutter_engine/impeller/core/buffer_view.h"
+#include "third_party/flutter_engine/impeller/core/formats.h"
+#include "third_party/flutter_engine/impeller/core/host_buffer.h"
+#include "third_party/flutter_engine/impeller/core/texture_descriptor.h"
+#include "third_party/flutter_engine/impeller/geometry/rect.h"
+#include "third_party/flutter_engine/impeller/geometry/size.h"
+#include "third_party/flutter_engine/impeller/renderer/command_buffer.h"
+#include "third_party/flutter_engine/impeller/renderer/render_pass.h"
+#include "third_party/flutter_engine/impeller/renderer/render_target.h"
+#include "third_party/flutter_engine/impeller/typographer/backends/skia/typeface_skia.h"
+#include "third_party/flutter_engine/impeller/typographer/font_glyph_pair.h"
+#include "third_party/flutter_engine/impeller/typographer/glyph.h"
+#include "third_party/flutter_engine/impeller/typographer/glyph_atlas.h"
+#include "third_party/flutter_engine/impeller/typographer/rectangle_packer.h"
+#include "third_party/flutter_engine/impeller/typographer/typographer_context.h"
+#include "third_party/skia/HEAD/include/core/SkBitmap.h"
+#include "third_party/skia/HEAD/include/core/SkBlendMode.h"
+#include "third_party/skia/HEAD/include/core/SkCanvas.h"
+#include "third_party/skia/HEAD/include/core/SkColor.h"
+#include "third_party/skia/HEAD/include/core/SkFont.h"
+#include "third_party/skia/HEAD/include/core/SkPaint.h"
+#include "third_party/skia/HEAD/include/core/SkSize.h"
+#include "third_party/skia/HEAD/include/core/SkSurface.h"
 
 namespace impeller {
 
@@ -74,8 +72,7 @@ SkPaint::Join ToSkiaJoin(Join join) {
 
 bool HasLightGlyphs(const GlyphAtlas& atlas,
                     const std::vector<FontGlyphPair>& new_pairs,
-                    size_t start_index,
-                    size_t end_index) {
+                    size_t start_index, size_t end_index) {
   if (atlas.GetType() != GlyphAtlas::Type::kAlphaBitmap) {
     return false;
   }
@@ -144,10 +141,8 @@ SkImageInfo TypographerContextSkia::GetImageInfo(const GlyphAtlas& atlas,
 static size_t AppendToExistingAtlas(
     const std::shared_ptr<GlyphAtlas>& atlas,
     const std::vector<FontGlyphPair>& extra_pairs,
-    std::vector<Rect>& glyph_positions,
-    const std::vector<Rect>& glyph_sizes,
-    ISize atlas_size,
-    int64_t height_adjustment,
+    std::vector<Rect>& glyph_positions, const std::vector<Rect>& glyph_sizes,
+    ISize atlas_size, int64_t height_adjustment,
     const std::shared_ptr<RectanglePacker>& rect_packer) {
   TRACE_EVENT0("impeller", __FUNCTION__);
   if (!rect_packer || atlas_size.IsEmpty()) {
@@ -176,13 +171,10 @@ static size_t AppendToExistingAtlas(
 }
 
 static size_t PairsFitInAtlasOfSize(
-    const std::vector<FontGlyphPair>& pairs,
-    const ISize& atlas_size,
-    std::vector<Rect>& glyph_positions,
-    const std::vector<Rect>& glyph_sizes,
+    const std::vector<FontGlyphPair>& pairs, const ISize& atlas_size,
+    std::vector<Rect>& glyph_positions, const std::vector<Rect>& glyph_sizes,
     int64_t height_adjustment,
-    const std::shared_ptr<RectanglePacker>& rect_packer,
-    size_t start_index) {
+    const std::shared_ptr<RectanglePacker>& rect_packer, size_t start_index) {
   FML_DCHECK(!atlas_size.IsEmpty());
 
   for (size_t i = start_index; i < pairs.size(); i++) {
@@ -208,10 +200,8 @@ static size_t PairsFitInAtlasOfSize(
 static ISize ComputeNextAtlasSize(
     const std::shared_ptr<GlyphAtlasContext>& atlas_context,
     const std::vector<FontGlyphPair>& extra_pairs,
-    std::vector<Rect>& glyph_positions,
-    const std::vector<Rect>& glyph_sizes,
-    size_t glyph_index_start,
-    int64_t max_texture_height) {
+    std::vector<Rect>& glyph_positions, const std::vector<Rect>& glyph_sizes,
+    size_t glyph_index_start, int64_t max_texture_height) {
   // Because we can't grow the skyline packer horizontally, pick a reasonable
   // large width for all atlases.
   static constexpr int64_t kAtlasWidth = 4096;
@@ -250,12 +240,9 @@ static Point SubpixelPositionToPoint(SubpixelPosition pos) {
   return Point((pos & 0xff) / 4.f, (pos >> 2 & 0xff) / 4.f);
 }
 
-static void DrawGlyph(SkCanvas* canvas,
-                      const SkPoint position,
-                      const ScaledFont& scaled_font,
-                      const SubpixelGlyph& glyph,
-                      const Rect& scaled_bounds,
-                      const GlyphProperties& prop) {
+static void DrawGlyph(SkCanvas* canvas, const SkPoint position,
+                      const ScaledFont& scaled_font, const SubpixelGlyph& glyph,
+                      const Rect& scaled_bounds, const GlyphProperties& prop) {
   const auto& metrics = scaled_font.font.GetMetrics();
   SkGlyphID glyph_id = glyph.glyph.index;
 
@@ -312,8 +299,7 @@ static bool BulkUpdateAtlasBitmap(const GlyphAtlas& atlas,
                                   HostBuffer& data_host_buffer,
                                   const std::shared_ptr<Texture>& texture,
                                   const std::vector<FontGlyphPair>& new_pairs,
-                                  size_t start_index,
-                                  size_t end_index) {
+                                  size_t start_index, size_t end_index) {
   TRACE_EVENT0("impeller", __FUNCTION__);
 
   bool has_light_glyphs =
@@ -381,8 +367,7 @@ static bool UpdateAtlasBitmap(const GlyphAtlas& atlas,
                               HostBuffer& data_host_buffer,
                               const std::shared_ptr<Texture>& texture,
                               const std::vector<FontGlyphPair>& new_pairs,
-                              size_t start_index,
-                              size_t end_index) {
+                              size_t start_index, size_t end_index) {
   TRACE_EVENT0("impeller", __FUNCTION__);
 
   for (size_t i = start_index; i < end_index; i++) {
@@ -460,8 +445,7 @@ static bool UpdateAtlasBitmap(const GlyphAtlas& atlas,
   return blit_pass->ConvertTextureToShaderRead(texture);
 }
 
-static Rect ComputeGlyphSize(const SkFont& font,
-                             const SubpixelGlyph& glyph,
+static Rect ComputeGlyphSize(const SkFont& font, const SubpixelGlyph& glyph,
                              Scalar scale) {
   SkRect scaled_bounds;
   SkPaint glyph_paint;
@@ -525,7 +509,13 @@ TypographerContextSkia::CollectNewGlyphs(
         const auto& font_glyph_bounds =
             font_glyph_atlas->FindGlyphBounds(subpixel_glyph);
 
-        if (!font_glyph_bounds.has_value()) {
+        // Treat placeholder glyphs as "missing" so that they can be packed into
+        // the atlas in this pass. If we skip them, they may stay as
+        // placeholders forever under high memory/contention pressure (like
+        // during heavy on-device LLM inference), causing text dropouts or
+        // triggering fallback paths.
+        if (!font_glyph_bounds.has_value() ||
+            font_glyph_bounds->is_placeholder) {
           new_glyphs.push_back(FontGlyphPair{scaled_font, subpixel_glyph});
           auto glyph_bounds = ComputeGlyphSize(
               sk_font, subpixel_glyph, static_cast<Scalar>(scaled_font.scale));
@@ -546,9 +536,7 @@ TypographerContextSkia::CollectNewGlyphs(
 }
 
 std::shared_ptr<GlyphAtlas> TypographerContextSkia::CreateGlyphAtlas(
-    Context& context,
-    GlyphAtlas::Type type,
-    HostBuffer& data_host_buffer,
+    Context& context, GlyphAtlas::Type type, HostBuffer& data_host_buffer,
     const std::shared_ptr<GlyphAtlasContext>& atlas_context,
     const std::vector<RenderableText>& renderable_texts) const {
   TRACE_EVENT0("impeller", __FUNCTION__);
